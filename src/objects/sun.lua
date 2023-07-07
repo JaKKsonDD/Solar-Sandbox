@@ -59,11 +59,10 @@ local function circlify(objOne, objTwo)
     local objVolTwo = calculateVol(objTwo.r)
     
     objVolOne = objVolOne + objVolTwo
-    objVolTwo = 0
     
     local rOne = (objVolOne/(4/3*math.pi))^(1/3)
 
-    return rOne, objVolTwo
+    return rOne, 0
 end
 
 local function canMerge(objOne, objTwo)
@@ -89,17 +88,22 @@ function sun.load()
 end
 
 function sun.update(dt)
+    local garbage = {}
+
     if #suns > 1 then
         for i, sun in ipairs(suns) do
             for v, sun2 in ipairs(suns) do
                 local one, two = radOrder(sun, sun2)
                 if canMerge(sun, sun2) then
                     sun.r, sun2.r = circlify(one, two)
+                    list.insert(garabage, sun2)
                 end
             end
         end
     end
-
+    for object in ipairs(garbage) do
+        list.remove(suns, object)
+    end
 
     local mx, my = love.mouse.getPosition()
   
@@ -121,13 +125,14 @@ function sun.update(dt)
             end
         end
     end   
+
     for i, sun in ipairs(suns) do
-        if sun.typ == "sun" then
-            changeGrowthRate(sun, dt)
-        end
+        sun.r = changeGrowthRate(sun, dt)
+        sun.r = sun.r + sun.rate
     end
 
     timer = timer + dt
+
 end
 
 function sun.mousepressed(x, y, button, istouch)
@@ -137,9 +142,9 @@ function sun.mousepressed(x, y, button, istouch)
         rate = 0.01,
         velX = 0,
         velY = 0,
+        r = 40,
         x = x,
         y = y,
-        r = 40
         })
     end
     
