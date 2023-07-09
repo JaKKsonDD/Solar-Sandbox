@@ -1,6 +1,6 @@
 sun = {}
 
---
+
 
 local function getDistance(x1, y1, x2, y2)
     local horizontal_distance = x1 - x2
@@ -13,7 +13,18 @@ local function getDistance(x1, y1, x2, y2)
     local distance = math.sqrt(c)
     return distance
 end
-  
+
+local function changeGrowthRate(sun, dt)
+    if sun.r < 75 then
+      sun.rate = 0.01
+    --else
+      --sun.rate = sun.r / 50
+    end
+    return sun.r -- Return the updated value of sun.r
+end
+
+-- GRABBING FUNCTIONS ------------------------
+
 local function tryGrabASun(list)
     local mouse_x, mouse_y = love.mouse.getPosition()
     
@@ -25,14 +36,6 @@ local function tryGrabASun(list)
     end
 end
   
-local function changeGrowthRate(sun, dt)
-    if sun.r < 75 then
-      sun.rate = 0.01
-    else
-      sun.rate = sun.r/50
-    end
-end
-  
 local function didStartGrab()
     return love.mouse.isDown(2) and grabbed_thing == nil
 end
@@ -41,12 +44,14 @@ local function didStopGrab()
     return not love.mouse.isDown(2) and grabbed_thing ~= nil
 end
   
-local function updateObject(object, dt)
-    object.x = object.x + object.velX * dt
-    object.y = object.y + object.velY * dt
+local function updateObject(list, dt)
+    for i, object in ipairs(list) do
+        object.x = object.x + object.velX * dt
+        object.y = object.y + object.velY * dt
+    end
 end
 
---
+-- MERGING FUNCTIONS ----------------------
 
 function calculateVol(r)
 -- convert radius to volume
@@ -80,7 +85,7 @@ local function radOrder(one, two)
     end
 end
 
---
+-----------------------------------------
 
 function sun.load()
     suns = {}
@@ -90,46 +95,44 @@ end
 function sun.update(dt)
     local garbage = {}
 
-    if #suns > 1 then
-        for i, sun in ipairs(suns) do
-            for v, sun2 in ipairs(suns) do
-                local one, two = radOrder(sun, sun2)
-                if canMerge(sun, sun2) then
-                    sun.r, sun2.r = circlify(one, two)
-                    list.insert(garabage, sun2)
-                end
+    for i, sun in ipairs(suns) do
+        for v, sun2 in ipairs(suns) do
+            local one, two = radOrder(sun, sun2)
+            if canMerge(sun, sun2) then
+                -- #sun.r, sun2.r = circlify(one, two)
+                -- table.insert(garbage, sun2)
             end
         end
     end
     for object in ipairs(garbage) do
-        list.remove(suns, object)
+        table.remove(suns, object)
     end
 
     local mx, my = love.mouse.getPosition()
-  
-    if didStartGrab() then
+
+    if didStartGrab() then --grab
         grabbed_thing = tryGrabASun(suns)
-        startX, startY = mx, my
         startT = timer
-    elseif didStopGrab() then
+    end
+    if grabbed_thing ~= nil then
+        startX, startY = grabbed_thing.x, grabbed_thing.y
+        grabbed_thing.x, grabbed_thing.y = mx, my
+
+    end
+    if didStopGrab() then
         local time = timer - startT
-        grabbed_thing.velX, grabbed_thing.velY = (mx - startX)/(time), (my - startY)/(time)
+        grabbed_thing.velX, grabbed_thing.velY = ((mx - startX)/time), ((my - startY)/time)*2
+        print(grabbed_thing.velX)
         grabbed_thing = nil
     end
-  
-    for i, sun in ipairs(suns) do
-        updateObject(sun, dt) -- add velocity*dt to position
-        if love.mouse.isDown(2) then
-            if getDistance(mx, my, sun.x, sun.y) < sun.r then
-            sun.x, sun.y = mx, my
-            end
-        end
-    end   
+    
+    updateObject(suns, dt) -- add velocity*dt to position
 
     for i, sun in ipairs(suns) do
-        sun.r = changeGrowthRate(sun, dt)
+        changeGrowthRate(sun, dt)
         sun.r = sun.r + sun.rate
     end
+
 
     timer = timer + dt
 
@@ -145,6 +148,7 @@ function sun.mousepressed(x, y, button, istouch)
         r = 40,
         x = x,
         y = y,
+        grabbed = false
         })
     end
     
