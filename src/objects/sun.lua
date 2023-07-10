@@ -1,7 +1,5 @@
 sun = {}
 
-
-
 local function getDistance(x1, y1, x2, y2)
     local horizontal_distance = x1 - x2
     local vertical_distance = y1 - y2
@@ -104,12 +102,8 @@ function sun.update(dt)
             end
         end
     end
-    for object in ipairs(garbage) do
-        table.remove(suns, object)
-    end
 
     local mx, my = love.mouse.getPosition()
-
     if didStartGrab() then --grab
         grabbed_thing = tryGrabASun(suns)
         startT = timer
@@ -117,22 +111,27 @@ function sun.update(dt)
     if grabbed_thing ~= nil then
         startX, startY = grabbed_thing.x, grabbed_thing.y
         grabbed_thing.x, grabbed_thing.y = mx, my
-
     end
     if didStopGrab() then
         local time = timer - startT
         grabbed_thing.velX, grabbed_thing.velY = ((mx - startX)/time), ((my - startY)/time)*2
-        print(grabbed_thing.velX)
         grabbed_thing = nil
     end
-    
     updateObject(suns, dt) -- add velocity*dt to position
 
     for i, sun in ipairs(suns) do
         changeGrowthRate(sun, dt)
         sun.r = sun.r + sun.rate
+
+        local distance = getDistance(sun.x, sun.y, 400, 300)
+        if distance > 1600 then
+            table.insert(garbage, sun)
+        end
     end
 
+    for object in ipairs(garbage) do
+        table.remove(suns, object)
+    end
 
     timer = timer + dt
 
@@ -140,6 +139,7 @@ end
 
 function sun.mousepressed(x, y, button, istouch)
     if button == 1 then
+        print('pressed')
         table.insert(suns, 
         {
         rate = 0.01,
@@ -147,8 +147,7 @@ function sun.mousepressed(x, y, button, istouch)
         velY = 0,
         r = 40,
         x = x,
-        y = y,
-        grabbed = false
+        y = y
         })
     end
     
