@@ -134,7 +134,6 @@ function sun.update(dt)
     end
 
     timer = timer + dt
-
 end
 
 function sun.mousepressed(x, y, button, istouch)
