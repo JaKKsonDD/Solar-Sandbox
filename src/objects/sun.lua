@@ -41,6 +41,19 @@ end
 local function didStopGrab()
     return not love.mouse.isDown(2) and grabbed_thing ~= nil
 end
+
+local function calculateVel(list, timer)
+    recentps = {}
+    for i, point in ipairs(list) do
+        if point.time > (timer - 0.1) then
+            table.insert(recentps, point)
+        end
+    end
+
+    startp, endp = recentps[1], recentps[#recentps]
+    dx, dy, dt = endp.x - startp.x, endp.y - startp.y, endp.time - startp.time
+    return dx/dt, dy/dt
+end
   
 local function updateObject(list, dt)
     for i, object in ipairs(list) do
@@ -107,14 +120,16 @@ function sun.update(dt)
     if didStartGrab() then --grab
         grabbed_thing = tryGrabASun(suns)
         startT = timer
+        points = {}
     end
     if grabbed_thing ~= nil then
+        table.insert(points, {x = mx, y = my, time = timer})
         startX, startY = grabbed_thing.x, grabbed_thing.y
         grabbed_thing.x, grabbed_thing.y = mx, my
     end
     if didStopGrab() then
         local time = timer - startT
-        grabbed_thing.velX, grabbed_thing.velY = ((mx - startX)/time), ((my - startY)/time)*2
+        grabbed_thing.velX, grabbed_thing.velY = calculateVel(points, timer)--((mx - startX)/time), ((my - startY)/time)*2
         grabbed_thing = nil
     end
     updateObject(suns, dt) -- add velocity*dt to position
@@ -149,7 +164,6 @@ function sun.mousepressed(x, y, button, istouch)
         y = y
         })
     end
-    
 end
 
 function sun.draw()
