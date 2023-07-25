@@ -1,4 +1,5 @@
-sun = {}
+local sun = {}
+love.graphics.setDefaultFilter('nearest', 'nearest')
 
 local function getDistance(x1, y1, x2, y2)
     local horizontal_distance = x1 - x2
@@ -19,6 +20,17 @@ local function changeGrowthRate(sun, dt)
       --sun.rate = sun.r / 50
     end
     return sun.r -- Return the updated value of sun.r
+end
+
+local function drawOrbitButton(button)
+    love.graphics.setColor(220/255,131/225,20/225)
+    love.graphics.circle('fill', button.x + button.r + 40,button.y + button.r + 40,20)
+    love.graphics.setColor(1,1,1)
+    -- love.graphics.setLineWidth(3)
+    -- love.graphics.circle('line', button.x + button.r + 40,button.y + button.r + 40,21)
+    -- love.graphics.setLineWidth(1)
+    love.graphics.draw(orbitSym,button.x + button.r + 40,button.y + button.r + 40,0,1.4,1.4,orbitSym:getWidth()/2,orbitSym:getHeight()/2)
+    return true
 end
 
 -- GRABBING FUNCTIONS ------------------------
@@ -62,10 +74,21 @@ local function updateObject(list, dt)
     end
 end
 
+local function moveAlongCircle(obj1, obj2, distance, speed, dt)
+    -- Calculate the angular velocity based on the speed
+    local angularVelocity = speed / distance
+
+    -- Update the angle of obj1 based on the angular velocity and time
+    obj1.angle = (obj1.angle + angularVelocity * dt) % (2 * math.pi)
+
+    -- Calculate the position of obj1 based on the angle and distance
+    obj1.x = obj2.x + distance * math.cos(obj1.angle)
+    obj1.y = obj2.y + distance * math.sin(obj1.angle)
+end
+
 -- MERGING FUNCTIONS ----------------------
 
 function calculateVol(r)
--- convert radius to volume
     local vol = 4/3 * math.pi * r^3
     return vol
 end
@@ -101,6 +124,8 @@ end
 function sun.load()
     suns = {}
     timer = 0
+    drawButtons = nil
+    orbitSym = love.graphics.newImage('assets/images/orbitSym.png')
 end
 
 function sun.update(dt)
@@ -125,7 +150,19 @@ function sun.update(dt)
     if grabbed_thing ~= nil then
         table.insert(points, {x = mx, y = my, time = timer})
         startX, startY = grabbed_thing.x, grabbed_thing.y
-        grabbed_thing.x, grabbed_thing.y = mx, my
+        if love.keyboard.isDown('tab') then
+            drawButtons = grabbed_thing
+        else
+            grabbed_thing.x, grabbed_thing.y = mx, my
+        -- select = true
+        --     if select then
+        --         --the moment tab is released
+        --         love.mouse.setPosition(grabbed_thing.x, grabbed_thing.y)
+        --         select = false
+        --     end
+        end
+    else
+        drawButtons = nil
     end
     if didStopGrab() then
         local time = timer - startT
@@ -134,18 +171,23 @@ function sun.update(dt)
     end
     updateObject(suns, dt) -- add velocity*dt to position
 
-    for i, sun in ipairs(suns) do
+    for _, sun in ipairs(suns) do
         changeGrowthRate(sun, dt)
         sun.r = sun.r + sun.rate
 
         local distance = getDistance(sun.x, sun.y, 400, 300)
         if distance > 1600 then
-            table.insert(garbage, sun)
+            table.insert(garbage, _)
         end
     end
 
-    for object in ipairs(garbage) do
-        table.remove(suns, object)
+    for i, object in ipairs(garbage) do
+        table.remove(suns, i)
+    end
+
+    if drawButtons ~= nil then
+        if drawOrbitButton(drawButtons) then
+        end
     end
 
     timer = timer + dt
@@ -153,10 +195,10 @@ end
 
 function sun.mousepressed(x, y, button, istouch)
     if button == 1 then
-        print('pressed')
         table.insert(suns, 
         {
         rate = 0.01,
+        angle = 0,
         velX = 0,
         velY = 0,
         r = 40,
@@ -167,8 +209,23 @@ function sun.mousepressed(x, y, button, istouch)
 end
 
 function sun.draw()
-    for i, sun in ipairs(suns) do
-        love.graphics.setColor(1, .4, .1)
-        love.graphics.circle("fill", sun.x, sun.y, sun.r)
+    for i = 1, 3 do
+        for _, sun in ipairs(suns) do
+            if i == 1 then
+                love.graphics.setColor(.9,.3,0,.2)
+                love.graphics.circle("fill", sun.x, sun.y, sun.r*2)
+            elseif i == 2 then
+                love.graphics.setColor(.9,.3,0,.7)
+                love.graphics.circle("fill", sun.x, sun.y, sun.r*1.5)
+            elseif i == 3 then
+                love.graphics.setColor(1,1,1)
+                love.graphics.circle("fill", sun.x, sun.y, sun.r)
+            end
+        end
+    end
+    if drawButtons ~= nil then
+        drawOrbitButton(drawButtons)
     end
 end
+
+return sun
